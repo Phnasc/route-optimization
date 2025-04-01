@@ -21,7 +21,7 @@ route-optimization/             # Root of your GitHub repository
 ├── .gitignore                  # Git ignore file
 ├── examples/                   # Example usage scripts
 │   └── example_optimization.py
-└── route_optimization/         # Your actual package
+└── route_optimization/         
     ├── __init__.py
     ├── main.py
     ├── algorithms/
