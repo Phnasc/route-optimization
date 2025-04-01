@@ -20,8 +20,12 @@ route-optimization/             # Root of your GitHub repository
 ├── requirements.txt            # Dependencies
 ├── .gitignore                  # Git ignore file
 ├── examples/                   # Example usage scripts
+│   ├── __init__.py
 │   └── example_optimization.py
-└── route_optimization/         
+├── tests/                      # Test directory  
+│   ├── __init__.py
+│   └── test_basic.py
+└── route_optimization/         # Your actual package
     ├── __init__.py
     ├── main.py
     ├── algorithms/
