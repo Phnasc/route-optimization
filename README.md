@@ -13,19 +13,18 @@ This project implements a delivery route optimization system using Ant Colony Op
 ## Project Structure
 
 ```
-route-optimization/             # Root of your GitHub repository
-├── LICENSE                     # License file
+route-optimization/             # Root of your GitHub repository          
 ├── README.md                   # Project documentation
 ├── setup.py                    # Package installation script
 ├── requirements.txt            # Dependencies
 ├── .gitignore                  # Git ignore file
 ├── examples/                   # Example usage scripts
 │   ├── __init__.py
-│   └── example_optimization.py
+│   └── example_optimization.py # In case you want to test with some other adresses 
 ├── tests/                      # Test directory  
 │   ├── __init__.py
 │   └── test_basic.py
-└── route_optimization/         # Your actual package
+└── route_optimization/         
     ├── __init__.py
     ├── main.py
     ├── algorithms/
@@ -87,6 +86,38 @@ best_path, best_time, maps_url = run_route_optimization(
 )
 ```
 
+4. Examples output:
+   ```python
+$ python -m route_optimization.main
+Generating time matrix...
+Running Ant Colony Optimization with 3 ants and 100 iterations...
+Time matrix visualization saved as time_matrix.png
+Pheromone levels visualization saved as pheromone_levels.png
+Folium is not installed. Install it with 'pip install folium' to visualize routes on a map.
+
+Optimization Results:
+--------------------
+Best Path: [0, 6, 4, 2, 5, 3, 1]
+Best Time: 42.0 minutes
+Google Maps URL: https://www.google.com/maps/dir/-23.9353825,-46.3328107/-23.9442396,-46.3326986/-23.9346401,-46.3359449/-23.9311721,-46.3329727/-23.9325152,-46.330099/-23.9846278,-46.2975248/-23.9903652,-46.30641480000001/-23.9353825,-46.3328107/
+
+Delivery Route:
+--------------
+1. Pr. dos Andradas, 45 - Centro, Santos
+   -> 2. Av. Senador Pinheiro Machado, 48 - Vila Matias, Santos
+2. Av. Senador Pinheiro Machado, 48 - Vila Matias, Santos
+   -> 3. R. Santa Cecília, 795 - Morro de São Bento, Santos
+3. R. Santa Cecília, 795 - Morro de São Bento, Santos
+   -> 4. Largo Marquês de Monte Alegre, 1 - Valongo, Santos
+4. Largo Marquês de Monte Alegre, 1 - Valongo, Santos
+   -> 5. R. Quinze de Novembro, 95 - Centro, Santos - SP
+5. R. Quinze de Novembro, 95 - Centro, Santos - SP
+   -> 6. Av. Gov. Fernando Costa, 343 - Ponta da Praia, Santos
+6. Av. Gov. Fernando Costa, 343 - Ponta da Praia, Santos
+   -> 7. Av. Bartholomeu de Gusmão, 192 - Ponta da Praia, Santos
+7. Av. Bartholomeu de Gusmão, 192 - Ponta da Praia, Santos (Final Destination)
+```
+
 ## Algorithm Details
 
 The Ant Colony Optimization algorithm works by simulating ants finding the shortest path. Key components:
@@ -100,9 +131,10 @@ The Ant Colony Optimization algorithm works by simulating ants finding the short
 
 The system can generate:
 - Time matrix heatmaps
+  ![image](https://github.com/user-attachments/assets/d04b192f-432c-4d7c-8626-bb51d7e34f86)
 - Pheromone level visualizations
-- Interactive route maps (requires folium)
-
+  ![image](https://github.com/user-attachments/assets/8e566ac7-207d-4381-9c69-7ea13e3c5918)
+- Interactive route maps (with Google maps and Folium)
 ## Requirements
 
 - Python 3.7 or higher
@@ -115,6 +147,3 @@ The system can generate:
 
 Pedro Henrique Nascimento
 
-## License
-
-MIT
