@@ -3,9 +3,9 @@ Basic tests for the route optimization package.
 """
 import unittest
 import numpy as np
-from route_optimization.models.graph import Graph
-from route_optimization.models.location import LocationManager
-from route_optimization.models.path import Path
+from models.graph import Graph
+from models.location import LocationManager
+from models.path import Path
 
 
 class TestGraph(unittest.TestCase):
