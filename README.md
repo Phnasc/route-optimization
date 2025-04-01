@@ -85,21 +85,8 @@ best_path, best_time, maps_url = run_route_optimization(
     num_iterations=100
 )
 ```
-
-4. Examples output:
-   ```python
-$ python -m route_optimization.main
-Generating time matrix...
-Running Ant Colony Optimization with 3 ants and 100 iterations...
-Time matrix visualization saved as time_matrix.png
-Pheromone levels visualization saved as pheromone_levels.png
-Folium is not installed. Install it with 'pip install folium' to visualize routes on a map.
-
-Optimization Results:
---------------------
-Best Path: [0, 6, 4, 2, 5, 3, 1]
-Best Time: 42.0 minutes
-Google Maps URL: https://www.google.com/maps/dir/-23.9353825,-46.3328107/-23.9442396,-46.3326986/-23.9346401,-46.3359449/-23.9311721,-46.3329727/-23.9325152,-46.330099/-23.9846278,-46.2975248/-23.9903652,-46.30641480000001/-23.9353825,-46.3328107/
+4. Output Example
+   ![image](https://github.com/user-attachments/assets/93997e5c-ffb4-4083-ac97-c4a81ee3c80d)
 
 Delivery Route:
 --------------
@@ -116,7 +103,6 @@ Delivery Route:
 6. Av. Gov. Fernando Costa, 343 - Ponta da Praia, Santos
    -> 7. Av. Bartholomeu de Gusmão, 192 - Ponta da Praia, Santos
 7. Av. Bartholomeu de Gusmão, 192 - Ponta da Praia, Santos (Final Destination)
-```
 
 ## Algorithm Details
 
@@ -133,8 +119,10 @@ The system can generate:
 - Time matrix heatmaps
   ![image](https://github.com/user-attachments/assets/d04b192f-432c-4d7c-8626-bb51d7e34f86)
 - Pheromone level visualizations
-  ![image](https://github.com/user-attachments/assets/8e566ac7-207d-4381-9c69-7ea13e3c5918)
+  ![image](https://github.com/user-attachments/assets/038338d6-cc6b-4d6f-89c6-bcff1856f32d)
+
 - Interactive route maps (with Google maps and Folium)
+  https://www.google.com/maps/dir/-23.9353825,-46.3328107/-23.9442396,-46.3326986/-23.9346401,-46.3359449/-23.9311721,-46.3329727/-23.9325152,-46.330099/-23.9846278,-46.2975248/-23.9903652,-46.30641480000001/-23.9353825,-46.3328107/
 ## Requirements
 
 - Python 3.7 or higher
