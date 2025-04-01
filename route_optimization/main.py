@@ -5,16 +5,16 @@ import time
 import numpy as np
 from typing import List, Tuple
 
-from route_optimization.models.graph import Graph
-from route_optimization.models.location import LocationManager
-from route_optimization.algorithms.aco import AntColonyOptimizer
-from route_optimization.utils.maps_api import (
+from models.graph import Graph
+from models.location import LocationManager
+from algorithms.aco import AntColonyOptimizer
+from utils.maps_api import (
     initialize_gmaps, 
     generate_time_matrix, 
     generate_google_maps_url,
     get_geocoded_locations
 )
-from route_optimization.utils.visualization import (
+from utils.visualization import (
     plot_time_matrix,
     create_route_map,
     plot_pheromone_levels
