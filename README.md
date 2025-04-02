@@ -113,6 +113,8 @@ The Ant Colony Optimization algorithm works by simulating ants finding the short
 - **Time Windows**: Each delivery has a specific time window
 - **Constraints**: Maximum delivery times between locations
 
+  If you would like to learn more about it, please feel free to access the file projec_aco_rev1.pdf 
+
 ## Visualizations
 
 The system can generate:
