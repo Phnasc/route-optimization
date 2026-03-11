@@ -1,98 +1,107 @@
-"""
-Main entry point for the route optimization application.
-"""
-import time
-import numpy as np
-from typing import List, Tuple
+"""Main entry point and public API for route optimization."""
 
-from models.graph import Graph
-from models.location import LocationManager
-from algorithms.aco import AntColonyOptimizer
-from utils.maps_api import (
-    initialize_gmaps, 
-    generate_time_matrix, 
+import time
+
+import numpy as np
+
+from route_optimization.algorithms.aco import AntColonyOptimizer
+from route_optimization.core.config import settings
+from route_optimization.core.exceptions import ValidationError
+from route_optimization.core.logging import configure_logging, get_logger
+from route_optimization.models.graph import Graph
+from route_optimization.models.location import LocationManager
+from route_optimization.utils.maps_api import (
     generate_google_maps_url,
-    get_geocoded_locations
+    generate_time_matrix,
+    get_geocoded_locations,
+    initialize_gmaps,
 )
-from utils.visualization import (
-    plot_time_matrix,
+from route_optimization.utils.visualization import (
     create_route_map,
-    plot_pheromone_levels
+    plot_pheromone_levels,
+    plot_time_matrix,
 )
+
+log = get_logger(__name__)
 
 
 def build_graph_from_matrix(time_matrix: np.ndarray) -> Graph:
     """
-    Build a graph from the time matrix.
-    
+    Build a fully-connected directed Graph from a travel-time matrix.
+
     Args:
-        time_matrix: Matrix of travel times
-        
+        time_matrix: Square numpy array of travel times (minutes).
+
     Returns:
-        Graph object
+        Graph with one edge per ordered address pair.
     """
-    num_locations = time_matrix.shape[0]
-    graph = Graph(num_locations)
-    
-    for i in range(num_locations):
-        for j in range(num_locations):
+    n = time_matrix.shape[0]
+    graph = Graph(n)
+    for i in range(n):
+        for j in range(n):
             if i != j:
-                graph.add_edge(i, j, time_matrix[i][j])
-    
+                graph.add_edge(i, j, float(time_matrix[i][j]))
     return graph
 
 
 def run_route_optimization(
-    api_key: str, 
-    addresses: List[str], 
-    order_confirmation_times: List[float],
-    num_ants: int = 10, 
-    num_iterations: int = 100,
-    max_delivery_time: float = 15.0,
-    alpha: float = 1.0,
-    beta: float = 2.0,
-    evaporation_rate: float = 0.5,
-    time_window_duration: float = 0.25,  # Default 15-minute window
-    visualize: bool = False
-) -> Tuple[List[int], float, str]:
+    api_key: str,
+    addresses: list[str],
+    order_confirmation_times: list[float],
+    num_ants: int = settings.num_ants,
+    num_iterations: int = settings.num_iterations,
+    max_delivery_time: float = settings.max_delivery_time,
+    alpha: float = settings.alpha,
+    beta: float = settings.beta,
+    evaporation_rate: float = settings.evaporation_rate,
+    time_window_duration: float = 0.25,
+    visualize: bool = False,
+) -> tuple[list[int], float, str]:
     """
-    Main function to run the route optimization algorithm.
-    
+    Run the full route optimization pipeline.
+
+    Steps:
+        1. Fetch travel times via the Google Maps Directions API.
+        2. Build a weighted graph from the time matrix.
+        3. Run ACO to find the best delivery order.
+        4. Generate a shareable Google Maps URL.
+        5. Optionally save visualizations to disk.
+
     Args:
-        api_key: Google Maps API key
-        addresses: List of delivery addresses
-        order_confirmation_times: List of order confirmation times
-        num_ants: Number of ants for the algorithm
-        num_iterations: Number of iterations to run
-        max_delivery_time: Maximum allowed delivery time
-        alpha: Pheromone importance factor
-        beta: Heuristic importance factor
-        evaporation_rate: Pheromone evaporation rate
-        time_window_duration: Duration of each delivery window
-        visualize: Whether to generate visualizations
-    
+        api_key: Google Maps API key.
+        addresses: Ordered list of delivery addresses.
+        order_confirmation_times: Earliest delivery time (hours) for each address.
+        num_ants: Number of ants per ACO iteration.
+        num_iterations: Number of ACO iterations.
+        max_delivery_time: Maximum travel time allowed between two stops (minutes).
+        alpha: Pheromone importance factor.
+        beta: Heuristic (inverse travel time) importance factor.
+        evaporation_rate: Pheromone evaporation fraction per iteration.
+        time_window_duration: Width of each delivery window in hours.
+        visualize: If True, save PNG/HTML visualizations to the current directory.
+
     Returns:
-        Tuple of (best_path, best_time, google_maps_url)
+        Tuple of ``(best_path, best_time, google_maps_url)`` where *best_path*
+        is an ordered list of address indices and *best_time* is total route
+        duration in minutes.
+
+    Raises:
+        ValidationError: If inputs are malformed.
+        MapsAPIError: If the Maps API call fails.
+        NoRouteFoundError: If ACO cannot find a valid route.
     """
-    # Initialize Google Maps client
+    if len(addresses) != len(order_confirmation_times):
+        raise ValidationError("addresses and order_confirmation_times must have the same length")
+
     gmaps = initialize_gmaps(api_key)
-    
-    print("Generating time matrix...")
-    # Generate time windows for each address
-    time_windows = [(time, time + time_window_duration) for time in order_confirmation_times]
-    
-    # Generate time matrix
+
+    time_windows = [(t, t + time_window_duration) for t in order_confirmation_times]
     departure_time = int(time.time())
+
     time_matrix = generate_time_matrix(gmaps, addresses, departure_time)
-    
-    # Build graph from time matrix
     graph = build_graph_from_matrix(time_matrix)
-    
-    # Initialize location manager
     location_manager = LocationManager(addresses, time_windows)
-    
-    print(f"Running Ant Colony Optimization with {num_ants} ants and {num_iterations} iterations...")
-    # Initialize and run ACO
+
     optimizer = AntColonyOptimizer(
         location_manager=location_manager,
         graph=graph,
@@ -101,90 +110,69 @@ def run_route_optimization(
         alpha=alpha,
         beta=beta,
         evaporation_rate=evaporation_rate,
-        max_delivery_time=max_delivery_time
+        max_delivery_time=max_delivery_time,
     )
-    
     best_path, best_time = optimizer.run()
-    
-    # Generate Google Maps URL for visualization
+
     google_maps_url = generate_google_maps_url(best_path, addresses, gmaps)
-    
-    # Visualize results if requested
+
     if visualize:
         try:
-            # Plot time matrix
             fig = plot_time_matrix(time_matrix, addresses)
-            fig.savefig('time_matrix.png')
-            print("Time matrix visualization saved as time_matrix.png")
-            
-            # Plot pheromone levels
+            fig.savefig("time_matrix.png")
+            log.info("visualization_saved", file="time_matrix.png")
+
             fig = plot_pheromone_levels(graph, best_path)
-            fig.savefig('pheromone_levels.png')
-            print("Pheromone levels visualization saved as pheromone_levels.png")
-            
-            # Create route map if folium is available
+            fig.savefig("pheromone_levels.png")
+            log.info("visualization_saved", file="pheromone_levels.png")
+
             locations = get_geocoded_locations(gmaps, addresses)
             route_map = create_route_map(locations, best_path)
             if route_map:
-                route_map.save('route_map.html')
-                print("Interactive route map saved as route_map.html")
-        except Exception as e:
-            print(f"Error generating visualizations: {e}")
-    
+                route_map.save("route_map.html")
+                log.info("visualization_saved", file="route_map.html")
+        except Exception as exc:
+            log.warning("visualization_failed", error=str(exc))
+
     return best_path, best_time, google_maps_url
 
 
-def main():
-    """
-    Main function to demonstrate the route optimization.
-    """
-    # Configuration
+def main() -> None:
+    """CLI entry point for demonstration purposes."""
+    configure_logging()
+
     ADDRESSES = [
-        'Pr. dos Andradas, 45 - Centro, Santos',
-        'Av. Bartholomeu de Gusmão, 192 - Ponta da Praia, Santos',
-        'Largo Marquês de Monte Alegre, 1 - Valongo, Santos',
-        'Av. Gov. Fernando Costa, 343 - Ponta da Praia, Santos',
-        'R. Santa Cecília, 795 - Morro de São Bento, Santos',
-        'R. Quinze de Novembro, 95 - Centro, Santos - SP',
-        'Av. Senador Pinheiro Machado, 48 - Vila Matias, Santos'
+        "Pr. dos Andradas, 45 - Centro, Santos",
+        "Av. Bartholomeu de Gusmão, 192 - Ponta da Praia, Santos",
+        "Largo Marquês de Monte Alegre, 1 - Valongo, Santos",
+        "Av. Gov. Fernando Costa, 343 - Ponta da Praia, Santos",
+        "R. Santa Cecília, 795 - Morro de São Bento, Santos",
+        "R. Quinze de Novembro, 95 - Centro, Santos - SP",
+        "Av. Senador Pinheiro Machado, 48 - Vila Matias, Santos",
     ]
-    ORDER_CONFIRMATION_TIMES = [17, 17.5, 18, 16.5, 17.25, 16, 18.5]
-    API_KEY = ''  # Insert your Google Maps API key here
-    
-    if not API_KEY:
-        print("Please set your Google Maps API key in the API_KEY variable")
+    ORDER_CONFIRMATION_TIMES = [17.0, 17.5, 18.0, 16.5, 17.25, 16.0, 18.5]
+
+    api_key = settings.google_maps_api_key
+    if not api_key:
+        log.error("missing_api_key", hint="Set GOOGLE_MAPS_API_KEY in your .env file")
         return
-    
-    # Run optimization
+
     best_path, best_time, google_maps_url = run_route_optimization(
-        api_key=API_KEY,
+        api_key=api_key,
         addresses=ADDRESSES,
         order_confirmation_times=ORDER_CONFIRMATION_TIMES,
         num_ants=3,
         num_iterations=100,
-        visualize=True
+        visualize=True,
     )
-    
-    # Output results
-    print("\nOptimization Results:")
-    print("--------------------")
-    print(f"Best Path: {best_path}")
-    print(f"Best Time: {best_time} minutes")
-    print(f"Google Maps URL: {google_maps_url}")
-    
-    # Print the route details
-    print("\nDelivery Route:")
-    print("--------------")
-    for idx, location_idx in enumerate(best_path):
-        address = ADDRESSES[location_idx]
-        if idx < len(best_path) - 1:
-            next_location_idx = best_path[idx + 1]
-            # Print location and travel time to next location
-            print(f"{idx+1}. {address}")
-            print(f"   -> {idx+2}. {ADDRESSES[next_location_idx]}")
-        else:
-            print(f"{idx+1}. {address} (Final Destination)")
+
+    log.info("result", best_path=best_path, best_time_minutes=best_time)
+    log.info("maps_url", url=google_maps_url)
+
+    for idx, loc_idx in enumerate(best_path):
+        suffix = " (Final Stop)" if idx == len(best_path) - 1 else ""
+        log.info("route_step", step=idx + 1, address=ADDRESSES[loc_idx], suffix=suffix)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

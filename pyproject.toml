@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "route-optimization"
+version = "0.2.0"
+description = "Delivery route optimization using Ant Colony Optimization and Google Maps API"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24,<3.0",
+    "googlemaps>=4.4.0,<5.0",
+    "matplotlib>=3.7,<4.0",
+    "pydantic-settings>=2.0,<3.0",
+    "structlog>=24.0,<26.0",
+    "python-dotenv>=1.0,<2.0",
+]
+
+[project.optional-dependencies]
+visualization = ["folium>=0.14,<1.0"]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "pytest-mock>=3.12",
+    "ruff>=0.4",
+    "mypy>=1.10",
+]
+
+[project.scripts]
+route-optimize = "route_optimization.main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["route_optimization*"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.10"
+disallow_untyped_defs = true
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=route_optimization --cov-report=term-missing -v"
+
+[tool.coverage.run]
+source = ["route_optimization"]
+omit = ["*/tests/*"]
