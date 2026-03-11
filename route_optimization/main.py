@@ -47,14 +47,14 @@ def build_graph_from_matrix(time_matrix: np.ndarray) -> Graph:
 def run_route_optimization(
     api_key: str,
     addresses: list[str],
-    order_confirmation_times: list[float],
+    order_confirmation_times: list[float] | None = None,
     num_ants: int = settings.num_ants,
     num_iterations: int = settings.num_iterations,
     max_delivery_time: float = settings.max_delivery_time,
     alpha: float = settings.alpha,
     beta: float = settings.beta,
     evaporation_rate: float = settings.evaporation_rate,
-    time_window_duration: float = 0.25,
+    time_window_duration: float = 24.0,
     visualize: bool = False,
 ) -> tuple[list[int], float, str]:
     """
@@ -71,6 +71,7 @@ def run_route_optimization(
         api_key: Google Maps API key.
         addresses: Ordered list of delivery addresses.
         order_confirmation_times: Earliest delivery time (hours) for each address.
+            Defaults to ``[0.0] * len(addresses)`` (no time constraint).
         num_ants: Number of ants per ACO iteration.
         num_iterations: Number of ACO iterations.
         max_delivery_time: Maximum travel time allowed between two stops (minutes).
@@ -90,12 +91,16 @@ def run_route_optimization(
         MapsAPIError: If the Maps API call fails.
         NoRouteFoundError: If ACO cannot find a valid route.
     """
-    if len(addresses) != len(order_confirmation_times):
+    times = order_confirmation_times if order_confirmation_times is not None else [0.0] * len(
+        addresses
+    )
+
+    if len(addresses) != len(times):
         raise ValidationError("addresses and order_confirmation_times must have the same length")
 
     gmaps = initialize_gmaps(api_key)
 
-    time_windows = [(t, t + time_window_duration) for t in order_confirmation_times]
+    time_windows = [(t, t + time_window_duration) for t in times]
     departure_time = int(time.time())
 
     time_matrix = generate_time_matrix(gmaps, addresses, departure_time)
