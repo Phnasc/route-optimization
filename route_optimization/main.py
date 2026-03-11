@@ -143,40 +143,74 @@ def run_route_optimization(
 
 
 def main() -> None:
-    """CLI entry point for demonstration purposes."""
+    """CLI entry point — accepts addresses as arguments."""
+    import argparse
+    import sys
+
     configure_logging()
 
-    ADDRESSES = [
-        "Pr. dos Andradas, 45 - Centro, Santos",
-        "Av. Bartholomeu de Gusmão, 192 - Ponta da Praia, Santos",
-        "Largo Marquês de Monte Alegre, 1 - Valongo, Santos",
-        "Av. Gov. Fernando Costa, 343 - Ponta da Praia, Santos",
-        "R. Santa Cecília, 795 - Morro de São Bento, Santos",
-        "R. Quinze de Novembro, 95 - Centro, Santos - SP",
-        "Av. Senador Pinheiro Machado, 48 - Vila Matias, Santos",
-    ]
-    ORDER_CONFIRMATION_TIMES = [17.0, 17.5, 18.0, 16.5, 17.25, 16.0, 18.5]
+    parser = argparse.ArgumentParser(
+        prog="route-optimize",
+        description="Find the optimal delivery route for a list of addresses using ACO.",
+    )
+    parser.add_argument(
+        "-a", "--address",
+        dest="addresses",
+        action="append",
+        metavar="ADDRESS",
+        required=True,
+        help="Delivery address (repeat for each stop, minimum 2).",
+    )
+    parser.add_argument(
+        "-t", "--time",
+        dest="times",
+        action="append",
+        type=float,
+        metavar="HOURS",
+        help="Order confirmation time in hours for each address (e.g. 17.5). "
+             "Must match the number of --address flags if provided.",
+    )
+    parser.add_argument(
+        "--ants", type=int, default=settings.num_ants, metavar="N",
+        help=f"Number of ants per iteration (default: {settings.num_ants}).",
+    )
+    parser.add_argument(
+        "--iterations", type=int, default=settings.num_iterations, metavar="N",
+        help=f"Number of ACO iterations (default: {settings.num_iterations}).",
+    )
+    parser.add_argument(
+        "--visualize", action="store_true",
+        help="Save time matrix, pheromone map, and interactive route map to disk.",
+    )
+
+    args = parser.parse_args()
 
     api_key = settings.google_maps_api_key
     if not api_key:
         log.error("missing_api_key", hint="Set GOOGLE_MAPS_API_KEY in your .env file")
-        return
+        sys.exit(1)
+
+    if len(args.addresses) < 2:
+        parser.error("at least 2 addresses are required")
+
+    if args.times and len(args.times) != len(args.addresses):
+        parser.error("number of --time values must match number of --address values")
 
     best_path, best_time, google_maps_url = run_route_optimization(
         api_key=api_key,
-        addresses=ADDRESSES,
-        order_confirmation_times=ORDER_CONFIRMATION_TIMES,
-        num_ants=3,
-        num_iterations=100,
-        visualize=True,
+        addresses=args.addresses,
+        order_confirmation_times=args.times,
+        num_ants=args.ants,
+        num_iterations=args.iterations,
+        visualize=args.visualize,
     )
 
-    log.info("result", best_path=best_path, best_time_minutes=best_time)
+    log.info("result", best_time_minutes=round(best_time, 1))
     log.info("maps_url", url=google_maps_url)
 
     for idx, loc_idx in enumerate(best_path):
-        suffix = " (Final Stop)" if idx == len(best_path) - 1 else ""
-        log.info("route_step", step=idx + 1, address=ADDRESSES[loc_idx], suffix=suffix)
+        suffix = " ← final stop" if idx == len(best_path) - 1 else ""
+        log.info("route_step", step=idx + 1, address=args.addresses[loc_idx], suffix=suffix)
 
 
 if __name__ == "__main__":
