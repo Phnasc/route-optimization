@@ -152,23 +152,27 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="route-optimize",
         description="Find the optimal delivery route for a list of addresses using ACO.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "examples:\n"
+            "  # addresses only (no time constraints)\n"
+            '  python3 run.py --stop "Address 1" --stop "Address 2"\n\n'
+            "  # addresses with delivery time windows\n"
+            '  python3 run.py --stop "Address 1" 17.0 --stop "Address 2" 17.5\n'
+        ),
     )
     parser.add_argument(
-        "-a", "--address",
-        dest="addresses",
+        "-s", "--stop",
+        dest="stops",
+        nargs="+",
         action="append",
-        metavar="ADDRESS",
+        metavar=("ADDRESS", "TIME"),
         required=True,
-        help="Delivery address (repeat for each stop, minimum 2).",
-    )
-    parser.add_argument(
-        "-t", "--time",
-        dest="times",
-        action="append",
-        type=float,
-        metavar="HOURS",
-        help="Order confirmation time in hours for each address (e.g. 17.5). "
-             "Must match the number of --address flags if provided.",
+        help=(
+            "Delivery stop. Pass just the address, or address followed by "
+            "the earliest delivery time in hours (e.g. --stop \"Rua X\" 17.5). "
+            "Repeat for each stop."
+        ),
     )
     parser.add_argument(
         "--ants", type=int, default=settings.num_ants, metavar="N",
@@ -190,16 +194,33 @@ def main() -> None:
         log.error("missing_api_key", hint="Set GOOGLE_MAPS_API_KEY in your .env file")
         sys.exit(1)
 
-    if len(args.addresses) < 2:
-        parser.error("at least 2 addresses are required")
+    if len(args.stops) < 2:
+        parser.error("at least 2 stops are required")
 
-    if args.times and len(args.times) != len(args.addresses):
-        parser.error("number of --time values must match number of --address values")
+    addresses: list[str] = []
+    times: list[float] | None = None
+    has_times = any(len(stop) > 1 for stop in args.stops)
+
+    if has_times:
+        times = []
+        for stop in args.stops:
+            if len(stop) == 1:
+                parser.error(
+                    f"missing time for stop \"{stop[0]}\" — "
+                    "either all stops must have a time or none"
+                )
+            try:
+                addresses.append(stop[0])
+                times.append(float(stop[1]))
+            except ValueError:
+                parser.error(f"invalid time \"{stop[1]}\" — must be a number (e.g. 17.5)")
+    else:
+        addresses = [stop[0] for stop in args.stops]
 
     best_path, best_time, google_maps_url = run_route_optimization(
         api_key=api_key,
-        addresses=args.addresses,
-        order_confirmation_times=args.times,
+        addresses=addresses,
+        order_confirmation_times=times,
         num_ants=args.ants,
         num_iterations=args.iterations,
         visualize=args.visualize,
@@ -210,7 +231,7 @@ def main() -> None:
 
     for idx, loc_idx in enumerate(best_path):
         suffix = " ← final stop" if idx == len(best_path) - 1 else ""
-        log.info("route_step", step=idx + 1, address=args.addresses[loc_idx], suffix=suffix)
+        log.info("route_step", step=idx + 1, address=addresses[loc_idx], suffix=suffix)
 
 
 if __name__ == "__main__":
